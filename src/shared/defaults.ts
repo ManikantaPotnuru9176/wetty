@@ -1,5 +1,5 @@
 import { isDev } from './env.js';
-import type { SSH, Server } from './interfaces';
+import type { JWT, SSH, Server } from './interfaces';
 
 export const sshDefault: SSH = {
   user: process.env.SSHUSER || '',
@@ -25,3 +25,10 @@ export const serverDefault: Server = {
 export const forceSSHDefault = process.env.FORCESSH === 'true' || false;
 export const defaultCommand = process.env.COMMAND || 'login';
 export const defaultLogLevel = isDev ? 'debug' : 'http';
+
+export const jwtDefault: JWT = {
+  enable: process.env.JWT_ENABLE === 'true' || false,
+  secret: process.env.JWT_SECRET || 'your-jwt-secret-key',
+  algorithms: (process.env.JWT_ALGORITHMS || 'HS256').split(','),
+  expiresIn: process.env.JWT_EXPIRES_IN || '1h',
+};

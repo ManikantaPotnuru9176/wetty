@@ -33,6 +33,14 @@ export interface Server {
   allowIframe: boolean;
 }
 
+export interface JWT {
+  [s: string]: string | boolean | string[];
+  enable: boolean;
+  secret: string;
+  algorithms: string[];
+  expiresIn: string;
+}
+
 export interface Config {
   ssh: SSH;
   server: Server;
@@ -40,4 +48,5 @@ export interface Config {
   command: string;
   logLevel: typeof winston.level;
   ssl?: SSL;
+  jwt?: JWT;
 }

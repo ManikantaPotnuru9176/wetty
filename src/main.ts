@@ -11,7 +11,7 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import { start } from './server.js';
 import { loadConfigFile, mergeCliConf } from './shared/config.js';
-import { setLevel, logger } from './shared/logger.js';
+import { logger, setLevel } from './shared/logger.js';
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 const require = createRequire(import.meta.url);
@@ -114,6 +114,26 @@ const opts = yargs(hideBin(process.argv))
     description: 'set log level of wetty server',
     type: 'string',
   })
+  .option('enable-jwt', {
+    description: 'Enable JWT authentication',
+    type: 'boolean',
+  })
+  .option('jwt-enable', {
+    description: 'Enable JWT authentication (same as enable-jwt)',
+    type: 'boolean',
+  })
+  .option('jwt-secret', {
+    description: 'Secret key to verify JWT tokens',
+    type: 'string',
+  })
+  .option('jwt-algorithms', {
+    description: 'Comma-separated list of allowed JWT algorithms',
+    type: 'string',
+  })
+  .option('jwt-expires-in', {
+    description: 'Token expiration time',
+    type: 'string',
+  })
   .option('help', {
     alias: 'h',
     type: 'boolean',
@@ -127,7 +147,14 @@ if (!opts.help) {
     .then((config) => mergeCliConf(opts, config))
     .then((conf) => {
       setLevel(conf.logLevel);
-      start(conf.ssh, conf.server, conf.command, conf.forceSSH, conf.ssl);
+      start(
+        conf.ssh,
+        conf.server,
+        conf.command,
+        conf.forceSSH,
+        conf.ssl,
+        conf.jwt,
+      );
     })
     .catch((err: Error) => {
       logger().error('error in server', { err });

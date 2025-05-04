@@ -10,14 +10,18 @@ import { gcMetrics } from './server/metrics.js';
 import { server } from './server/socketServer.js';
 import { spawn } from './server/spawn.js';
 import {
-  sshDefault,
-  serverDefault,
-  forceSSHDefault,
   defaultCommand,
+  forceSSHDefault,
+  jwtDefault,
+  serverDefault,
+  sshDefault,
 } from './shared/defaults.js';
 import { logger as getLogger } from './shared/logger.js';
-import type { SSH, SSL, Server } from './shared/interfaces.js';
+
+import type { JWT, SSH, SSL, Server } from './shared/interfaces.js';
+
 import type { Express } from 'express';
+
 import type SocketIO from 'socket.io';
 
 export * from './shared/interfaces.js';
@@ -39,8 +43,17 @@ export const start = (
   command: string = defaultCommand,
   forcessh: boolean = forceSSHDefault,
   ssl: SSL | undefined = undefined,
+  jwt: JWT = jwtDefault,
 ): Promise<SocketIO.Server> =>
-  decorateServerWithSsh(express(), ssh, serverConf, command, forcessh, ssl);
+  decorateServerWithSsh(
+    express(),
+    ssh,
+    serverConf,
+    command,
+    forcessh,
+    ssl,
+    jwt,
+  );
 
 export async function decorateServerWithSsh(
   app: Express,
@@ -49,6 +62,7 @@ export async function decorateServerWithSsh(
   command: string = defaultCommand,
   forcessh: boolean = forceSSHDefault,
   ssl: SSL | undefined = undefined,
+  jwt: JWT = jwtDefault,
 ): Promise<SocketIO.Server> {
   const logger = getLogger();
   if (ssh.key) {
@@ -62,7 +76,7 @@ export async function decorateServerWithSsh(
   collectDefaultMetrics();
   gc().on('stats', gcMetrics);
 
-  const io = await server(app, serverConf, ssl);
+  const io = await server(app, serverConf, ssl, jwt);
   /**
    * Wetty server connected too
    * @fires WeTTy#connnection

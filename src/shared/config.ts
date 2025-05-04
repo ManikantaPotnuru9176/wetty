@@ -1,15 +1,19 @@
 import path from 'path';
+
 import fs from 'fs-extra';
 import JSON5 from 'json5';
 import isUndefined from 'lodash/isUndefined.js';
 import {
-  sshDefault,
-  serverDefault,
-  forceSSHDefault,
   defaultCommand,
   defaultLogLevel,
+  forceSSHDefault,
+  jwtDefault,
+  serverDefault,
+  sshDefault,
 } from './defaults.js';
-import type { Config, SSH, Server, SSL } from './interfaces';
+
+import type { Config, JWT, Server, SSH, SSL } from './interfaces';
+
 import type winston from 'winston';
 import type { Arguments } from 'yargs';
 
@@ -21,7 +25,9 @@ type confValue =
   | unknown
   | SSH
   | Server
-  | SSL;
+  | SSL
+  | JWT
+  | string[];
 
 /**
  * Cast given value to boolean
@@ -62,6 +68,18 @@ function parseLogLevel(
 }
 
 /**
+ * Parse algorithms string to an array
+ *
+ * @param algorithms - comma-separated algorithms string
+ * @returns array of algorithms
+ */
+function parseAlgorithms(algorithms: unknown): string[] {
+  if (isUndefined(algorithms)) return jwtDefault.algorithms;
+  if (Array.isArray(algorithms)) return algorithms;
+  return `${algorithms}`.split(',');
+}
+
+/**
  * Load JSON5 config from file and merge with default args
  * If no path is provided the default config is returned
  *
@@ -76,6 +94,7 @@ export async function loadConfigFile(filepath?: string): Promise<Config> {
       command: defaultCommand,
       forceSSH: forceSSHDefault,
       logLevel: defaultLogLevel,
+      jwt: jwtDefault,
     };
   }
   const content = await fs.readFile(path.resolve(filepath));
@@ -93,6 +112,9 @@ export async function loadConfigFile(filepath?: string): Promise<Config> {
       : ensureBoolean(parsed.forceSSH),
     ssl: parsed.ssl,
     logLevel: parseLogLevel(defaultLogLevel, parsed.logLevel),
+    jwt: isUndefined(parsed.jwt)
+      ? jwtDefault
+      : { ...jwtDefault, ...parsed.jwt },
   };
 }
 
@@ -105,15 +127,15 @@ export async function loadConfigFile(filepath?: string): Promise<Config> {
  *
  */
 const objectAssign = (
-  target: SSH | Server,
+  target: SSH | Server | JWT,
   source: Record<string, confValue>,
-): SSH | Server =>
+): SSH | Server | JWT =>
   Object.fromEntries(
     Object.entries(source).map(([key, value]) => [
       key,
       isUndefined(source[key]) ? target[key] : value,
     ]),
-  ) as SSH | Server;
+  ) as SSH | Server | JWT;
 
 /**
  * Merge cli arguemens with config object
@@ -129,6 +151,7 @@ export function mergeCliConf(opts: Arguments, config: Config): Config {
     cert: opts['ssl-cert'],
     ...config.ssl,
   } as SSL;
+
   return {
     ssh: objectAssign(config.ssh, {
       user: opts['ssh-user'],
@@ -149,6 +172,12 @@ export function mergeCliConf(opts: Arguments, config: Config): Config {
       title: opts.title,
       allowIframe: opts['allow-iframe'],
     }) as Server,
+    jwt: objectAssign(config.jwt || jwtDefault, {
+      enable: opts['jwt-enable'],
+      secret: opts['jwt-secret'],
+      algorithms: parseAlgorithms(opts['jwt-algorithms']),
+      expiresIn: opts['jwt-expires-in'],
+    }) as JWT,
     command: isUndefined(opts.command) ? config.command : `${opts.command}`,
     forceSSH: isUndefined(opts['force-ssh'])
       ? config.forceSSH
